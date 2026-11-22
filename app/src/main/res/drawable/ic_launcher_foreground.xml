@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- anillo exterior -->
+    <path
+        android:strokeColor="#65F4FF"
+        android:strokeWidth="3.5"
+        android:pathData="M54,54m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0" />
+    <!-- anillo interior -->
+    <path
+        android:strokeColor="#1485A3"
+        android:strokeWidth="1.6"
+        android:pathData="M54,54m-19,0a19,19 0,1 1,38 0a19,19 0,1 1,-38 0" />
+    <!-- L A Y (trazos) -->
+    <path
+        android:strokeColor="#E9FFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M37,47 L37,61 L43,61 M47,61 L50.5,47 L54,61 M58,47 L62,54 L66,47 M62,54 L62,61" />
+</vector>

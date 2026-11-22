@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LAY</string>
+    <string name="acc_descripcion">Permite que LAY ejecute tus órdenes de voz en este celular: ir al inicio, volver, tocar botones, desplazar la pantalla, escribir texto, tomar capturas y bloquear la pantalla. Solo actúa cuando tú se lo pides; no guarda ni envía lo que hay en pantalla.</string>
+    <string name="tile_label">LAY</string>
+</resources>

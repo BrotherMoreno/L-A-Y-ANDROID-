@@ -1,0 +1,45 @@
+plugins {
+    id 'com.android.application'
+}
+
+// La versión la pasa el workflow (-PlayVersion=3.0.0 -PlayCode=<n.º de run>); en local queda 3.0.0 / 1
+def layVersion = (project.findProperty("layVersion") ?: "3.0.0").toString()
+def layCode = (project.findProperty("layCode") ?: "1").toString().toInteger()
+// Firma: si el workflow trae el keystore (secrets), se firma con ese; si no, con la clave de depuración
+def ksFile = System.getenv("LAY_KEYSTORE")
+
+android {
+    namespace 'pe.lay.remoto'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "pe.lay.remoto"
+        minSdk 26
+        targetSdk 34
+        versionCode layCode
+        versionName layVersion
+    }
+
+    signingConfigs {
+        if (ksFile) {
+            release {
+                storeFile file(ksFile)
+                storePassword System.getenv("LAY_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("LAY_KEY_ALIAS")
+                keyPassword System.getenv("LAY_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig ksFile ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

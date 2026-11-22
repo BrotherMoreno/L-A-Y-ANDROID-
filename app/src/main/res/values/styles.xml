@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.LAY" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/lay_fondo</item>
+        <item name="android:statusBarColor">@color/lay_fondo</item>
+        <item name="android:navigationBarColor">@color/lay_fondo</item>
+    </style>
+    <color name="lay_fondo">#020B11</color>
+    <color name="lay_cian">#65F4FF</color>
+</resources>

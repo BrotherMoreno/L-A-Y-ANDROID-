@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vincular LAY</title>
+<style>
+:root{--bg:#020b11;--cyan:#65f4ff;--ice:#bafaff;--warn:#ffb547;--ok:#5dffb0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:#d9fbff;font-family:Inter,Segoe UI,system-ui,sans-serif}
+body{display:flex;flex-direction:column;justify-content:center;gap:14px;padding:28px 24px;min-height:100vh;
+  background:radial-gradient(ellipse at 50% 20%,rgba(0,156,190,.2),transparent 55%),var(--bg)}
+.orb{width:72px;height:72px;border-radius:50%;border:2px solid var(--cyan);box-shadow:0 0 24px rgba(101,244,255,.5),inset 0 0 16px rgba(101,244,255,.3);
+  display:grid;place-items:center;font:800 17px/1 Inter,sans-serif;letter-spacing:.1em;color:#e9ffff;align-self:center}
+h1{margin:6px 0 0;font-size:16px;letter-spacing:3px;text-align:center}
+p,li{font-size:14px;line-height:1.5;color:rgba(186,250,255,.75);margin:0}
+ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+b{color:#e9ffff}
+label{font:11px Consolas,monospace;letter-spacing:2px;color:rgba(186,250,255,.6)}
+input{width:100%;background:rgba(5,35,47,.8);border:1px solid rgba(101,244,255,.35);border-radius:14px;color:#e9ffff;padding:13px 15px;font-size:16px;outline:none}
+input:focus{border-color:var(--cyan)}
+button{border:1px solid var(--cyan);background:rgba(20,133,163,.35);color:#fff;border-radius:22px;padding:13px;font-size:15px}
+#aviso{display:none;border:1px solid rgba(255,181,71,.5);background:rgba(255,181,71,.08);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4}
+#aviso.ver{display:block}
+#aviso.ok{border-color:rgba(93,255,176,.5);background:rgba(93,255,176,.08);color:var(--ok)}
+</style>
+</head>
+<body>
+<div class="orb">LAY</div>
+<h1>VINCULAR CON TU PC</h1>
+<div id="aviso"></div>
+<ol>
+  <li>Instala <b>Tailscale</b> en este celular e inicia sesión con la misma cuenta que en tu PC.</li>
+  <li>En LAY de tu PC: <b>Configuración → Remoto → Activar</b>.</li>
+  <li>Escanea el QR con la cámara del celular, <b>copia el enlace</b> y pégalo aquí.</li>
+</ol>
+<label for="enlace">ENLACE DEL QR (o la IP de tu PC)</label>
+<input id="enlace" placeholder="http://100.x.y.z:8765/remoto#token=…" autocomplete="off" autocapitalize="off" spellcheck="false">
+<label for="tok">TOKEN (solo si pegaste la IP)</label>
+<input id="tok" placeholder="Opcional" autocomplete="off" autocapitalize="off" spellcheck="false">
+<button id="vincular">Vincular</button>
+<script>
+const $=id=>document.getElementById(id);
+const nativo=typeof LayNative!=='undefined';
+function aviso(t,ok){const a=$('aviso');a.textContent=t;a.className='ver'+(ok?' ok':'')}
+if(location.hash==='#sinconexion')aviso('No llego a tu PC. Revisa que Tailscale esté conectado en el celular y en la PC, y que LAY esté abierto.');
+if(nativo){try{const s=LayNative.servidor();if(s)$('enlace').value=s}catch(e){}}
+else aviso('Esta pantalla es parte de la app de Android. En el navegador abre directamente la dirección de tu PC.');
+
+// Acepta el enlace completo del QR o solo la IP (+ token aparte). Devuelve la URL final o null.
+function armarUrl(entrada,token){
+  let t=entrada.trim();if(!t)return null;
+  if(!/^https?:\/\//i.test(t))t='http://'+t;
+  let u;try{u=new URL(t)}catch(e){return null}
+  if(!u.port&&u.protocol==='http:')u.port='8765';
+  if(u.pathname==='/'||u.pathname==='')u.pathname='/remoto';
+  const tk=token.trim();
+  if(tk&&!/token=/.test(u.hash))u.hash='token='+encodeURIComponent(tk);
+  return u.toString();
+}
+$('vincular').onclick=()=>{
+  const url=armarUrl($('enlace').value,$('tok').value);
+  if(!url)return aviso('Ese enlace no parece válido. Cópialo otra vez desde el QR.');
+  if(!nativo)return aviso('Abre esta pantalla desde la app LAY de Android.');
+  if(!/token=/.test(new URL(url).hash))return aviso('Falta el token. Pega el enlace completo del QR o escribe el token.');
+  aviso('Conectando…',true);
+  if(!LayNative.vincular(url))aviso('No pude guardar ese enlace.');
+};
+</script>
+</body>
+</html>
