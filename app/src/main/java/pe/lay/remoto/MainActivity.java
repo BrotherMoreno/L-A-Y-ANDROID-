@@ -53,6 +53,8 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
     private ScrollView scroll;
     private EditText entrada;
     private TextView btnControl;
+    private TextView titulo;
+    private boolean enFondo;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -80,6 +82,7 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
     @Override
     protected void onResume() {
         super.onResume();
+        enFondo = false;
         boolean activo = LayAccesibilidad.activo();
         btnControl.setText(activo ? "● Control total activo" : "○ Activar control total");
         btnControl.setTextColor(activo ? VERDE : AMBAR);
@@ -192,6 +195,7 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
 
     @Override
     public boolean iniciar(Intent i) {
+        if (enFondo && LayAccesibilidad.activo() && LayAccesibilidad.iniciar(i)) return true;
         try {
             startActivity(i);
             return true;
@@ -202,6 +206,7 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
 
     @Override
     public void enSegundoPlano(Runnable r) {
+        enFondo = true;
         moveTaskToBack(true);
         ui.postDelayed(r, 900);
     }
@@ -225,6 +230,16 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
         permisoOk = null;
         permisoNo = null;
         if (r != null) r.run();
+    }
+
+    @Override
+    public void enUi(Runnable r) {
+        runOnUiThread(r);
+    }
+
+    @Override
+    public void estado(String texto) {
+        runOnUiThread(() -> titulo.setText(texto == null || texto.isEmpty() ? "LAY MÓVIL" : "LAY MÓVIL · " + texto));
     }
 
     @Override
@@ -299,7 +314,7 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
         LinearLayout centro = new LinearLayout(this);
         centro.setOrientation(LinearLayout.VERTICAL);
         centro.setPadding(dp(12), 0, 0, 0);
-        TextView titulo = new TextView(this);
+        titulo = new TextView(this);
         titulo.setText("LAY MÓVIL");
         titulo.setTextColor(HIELO);
         titulo.setTextSize(15);
@@ -313,10 +328,28 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
         centro.addView(btnControl);
         cab.addView(centro, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        raiz.addView(cab);
+
+        // Atajos a las pantallas de ajustes: IA, voz «Oye LAY» y control remoto de la PC
+        LinearLayout fila3 = new LinearLayout(this);
+        fila3.setOrientation(LinearLayout.HORIZONTAL);
+        fila3.setGravity(Gravity.CENTER);
+        TextView ia = boton("🧠 IA", CIAN);
+        ia.setOnClickListener(v -> startActivity(new Intent(this, AjustesIaActivity.class)));
+        TextView voz = boton("🎙 Voz", CIAN);
+        voz.setOnClickListener(v -> startActivity(new Intent(this, AjustesVozActivity.class)));
         TextView pc = boton("💻 Mi PC", CIAN);
         pc.setOnClickListener(v -> startActivity(new Intent(this, PcActivity.class)));
-        cab.addView(pc);
-        raiz.addView(cab);
+        for (TextView t : new TextView[]{ia, voz, pc}) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMargins(dp(3), 0, dp(3), 0);
+            t.setGravity(Gravity.CENTER);
+            fila3.addView(t, lp);
+        }
+        LinearLayout.LayoutParams flp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        flp.setMargins(0, dp(10), 0, 0);
+        raiz.addView(fila3, flp);
+
 
         // Conversación
         scroll = new ScrollView(this);
@@ -332,6 +365,7 @@ public class MainActivity extends Activity implements Cerebro.Anfitrion, TextToS
         LinearLayout atajos = new LinearLayout(this);
         atajos.setOrientation(LinearLayout.HORIZONTAL);
         String[] frases = {"Enciende la linterna", "¿Qué hora es?", "¿Cuánta batería tengo?", "Sube el volumen", "Abre WhatsApp", "Captura de pantalla", "Ayuda"};
+        // (con la IA activa: "Abre Spotify y busca salsa", "Dile a mamá que llego tarde"…)
         for (String f : frases) {
             TextView c = boton(f, HIELO);
             c.setOnClickListener(v -> procesar(f));

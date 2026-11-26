@@ -69,6 +69,43 @@ public class LayAccesibilidad extends AccessibilityService {
         return (x != null ? x : elegido).performAction(AccessibilityNodeInfo.ACTION_CLICK);
     }
 
+    /** Texto visible de la pantalla actual (sin campos de contraseña), para que la IA decida el siguiente paso. */
+    static String leerPantalla() {
+        if (instancia == null) return "";
+        AccessibilityNodeInfo raiz = instancia.getRootInActiveWindow();
+        if (raiz == null) return "No pude leer la pantalla.";
+        StringBuilder b = new StringBuilder();
+        if (raiz.getPackageName() != null) b.append("App: ").append(raiz.getPackageName()).append('\n');
+        recolectar(raiz, b, new int[]{0});
+        return b.length() == 0 ? "La pantalla no muestra texto legible." : b.toString();
+    }
+
+    private static void recolectar(AccessibilityNodeInfo n, StringBuilder b, int[] cuenta) {
+        if (n == null || cuenta[0] >= 80 || b.length() > 2500) return;
+        if (!n.isPassword() && n.isVisibleToUser()) {
+            CharSequence t = n.getText();
+            CharSequence d = n.getContentDescription();
+            String s = t != null && t.length() > 0 ? t.toString() : d != null ? d.toString() : "";
+            s = s.trim();
+            if (!s.isEmpty()) {
+                b.append(n.isEditable() ? "[campo] " : n.isClickable() ? "[botón] " : "").append(s.length() > 120 ? s.substring(0, 120) : s).append('\n');
+                cuenta[0]++;
+            }
+        }
+        for (int i = 0; i < n.getChildCount(); i++) recolectar(n.getChild(i), b, cuenta);
+    }
+
+    /** Abre una pantalla aunque LAY esté en segundo plano (Android 10+ lo bloquea a las apps comunes; a un servicio de accesibilidad activo, normalmente no). */
+    static boolean iniciar(Intent i) {
+        if (instancia == null) return false;
+        try {
+            instancia.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
     private static boolean igual(CharSequence a, String b) {
         return a != null && a.toString().trim().equalsIgnoreCase(b.trim());
     }

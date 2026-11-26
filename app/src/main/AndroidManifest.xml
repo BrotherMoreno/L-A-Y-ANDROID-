@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- «Oye LAY»: escuchar la palabra de activación en segundo plano (servicio en primer plano con notificación) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Se piden en el momento de usarlos (con tu confirmación): -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -23,6 +29,7 @@
         </intent>
         <package android:name="com.whatsapp" />
         <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.google.android.googlequicksearchbox" />
     </queries>
 
     <application
@@ -51,6 +58,20 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".AjustesIaActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".AjustesVozActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".EscuchaService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- "Control total": las manos de LAY dentro del celular. Se activa a mano en Ajustes → Accesibilidad -->
         <service

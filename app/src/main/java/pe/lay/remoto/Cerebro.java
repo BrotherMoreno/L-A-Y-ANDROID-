@@ -53,6 +53,12 @@ final class Cerebro {
         void permiso(String permiso, Runnable concedido, Runnable negado);
 
         void detenerVoz();
+
+        /** Ejecuta r en el hilo de la pantalla (la IA trabaja en otro hilo). */
+        void enUi(Runnable r);
+
+        /** Línea de estado ("pensando…"); texto vacío la limpia. No habla. */
+        void estado(String texto);
     }
 
     private static final Locale PE = new Locale("es", "PE");
@@ -63,6 +69,7 @@ final class Cerebro {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private Runnable pendiente;
     private boolean linterna;
+    private final Agente agente = new Agente(this);
 
     // ------------------------------------------------------------------ texto
 
@@ -142,7 +149,33 @@ final class Cerebro {
     // ------------------------------------------------------------------ entrada
 
     void ejecutar(String crudo, Anfitrion a) {
-        String raw = Normalizer.normalize(crudo.trim().toLowerCase(PE), Normalizer.Form.NFC);
+        final T t = preparar(crudo, a);
+        if (t == null) return;
+        if (confirmacion(t, a)) return;
+        if (control(t, a)) return;
+        if (Agente.activo(a.ctx())) {
+            // Con IA: entiende órdenes libres y encadena acciones. Si no hay red, cae a las reglas locales.
+            agente.preguntar(t.r, a, () -> reglasOFallo(t, a));
+            return;
+        }
+        reglasOFallo(t, a);
+    }
+
+    /** Lo usa la IA: corre una frase canónica por las reglas locales (las "herramientas" del agente). */
+    boolean ejecutarRegla(String frase, Anfitrion a) {
+        T t = preparar(frase, a);
+        return t != null && reglas(t, a);
+    }
+
+    private void reglasOFallo(T t, Anfitrion a) {
+        if (reglas(t, a)) return;
+        a.decir("No entendí «" + t.r + "». "
+                + (Agente.activo(a.ctx()) ? "Prueba de otra forma o di «ayuda»." : "Activa la IA en «🧠 IA» para órdenes libres, o di «ayuda»."));
+    }
+
+    /** Limpia la frase (sin tildes/mayúsculas para entender, con ellas para repetir). null si ya se respondió (saludo/vacío). */
+    private T preparar(String crudo, Anfitrion a) {
+        String raw = Normalizer.normalize(crudo.trim(), Normalizer.Form.NFC);
         String n = limpiar(raw);
         if (n.length() != raw.length()) raw = n;
         T t = new T(raw, n).recortar();
@@ -150,33 +183,34 @@ final class Cerebro {
         if (t.n.matches("(?:hola|oye|hey|buenas|ok|okay)(?: lay)?|lay")) {
             pendiente = null;
             a.decir("Dime, ¿qué hago?");
-            return;
+            return null;
         }
         // Muletillas del inicio: "oye lay, por favor ..."
         Matcher w = p("^(?:(?:oye|hola|ok|okay|hey)\\b\\s*)?(?:lay\\b\\s*)?(?:(?:por favor|porfa)\\b\\s*)?").matcher(t.n);
         if (w.find() && w.end() > 0) t = t.desde(w.end()).recortar();
-        t = new T(t.r.replaceAll("\\s+(?:por favor|porfa)\\s*$", ""), t.n.replaceAll("\\s+(?:por favor|porfa)\\s*$", "")).recortar();
+        t = new T(t.r.replaceAll("\\s+(?:[Pp]or favor|[Pp]orfa)\\s*$", ""), t.n.replaceAll("\\s+(?:por favor|porfa)\\s*$", "")).recortar();
         if (t.n.isEmpty()) {
             a.decir("Dime, ¿qué hago?");
-            return;
+            return null;
         }
+        return t;
+    }
 
-        if (confirmacion(t, a)) return;
-        if (control(t, a)) return;
-        if (pc(t, a)) return;
-        if (infoTelefono(t, a)) return;
-        if (linternaCmd(t, a)) return;
-        if (sonido(t, a)) return;
-        if (alarmaYTemporizador(t, a)) return;
-        if (llamar(t, a)) return;
-        if (mensaje(t, a)) return;
-        if (ajustes(t, a)) return;
-        if (camara(t, a)) return;
-        if (navegacion(t, a)) return;
-        if (youtubeMusicaBusqueda(t, a)) return;
-        if (globales(t, a)) return;
-        if (abrirApp(t, a)) return;
-        a.decir("No entendí «" + t.r + "». Di «ayuda» para ver lo que sé hacer.");
+    /** Reglas locales (sin internet). true si alguna entendió la orden. */
+    private boolean reglas(T t, Anfitrion a) {
+        if (pc(t, a)) return true;
+        if (infoTelefono(t, a)) return true;
+        if (linternaCmd(t, a)) return true;
+        if (sonido(t, a)) return true;
+        if (alarmaYTemporizador(t, a)) return true;
+        if (llamar(t, a)) return true;
+        if (mensaje(t, a)) return true;
+        if (ajustes(t, a)) return true;
+        if (camara(t, a)) return true;
+        if (navegacion(t, a)) return true;
+        if (youtubeMusicaBusqueda(t, a)) return true;
+        if (globales(t, a)) return true;
+        return abrirApp(t, a);
     }
 
     // ------------------------------------------------------------------ confirmación y control
@@ -211,7 +245,8 @@ final class Cerebro {
             a.decir("Puedo abrir apps, llamar y mandar WhatsApp o SMS con tu confirmación, prender la linterna, subir o bajar el volumen, "
                     + "poner alarmas y temporizadores, buscar en Google o YouTube, llevarte a un lugar, decirte la hora y la batería. "
                     + "Con el control total activado también toco botones, bajo la pantalla, vuelvo atrás, capturo y bloqueo. "
-                    + "Y si dices «en la PC» más una orden, se la mando a LAY de tu computadora.");
+                    + "Y si dices «en la PC» más una orden, se la mando a LAY de tu computadora. "
+                    + "Con la IA activada entiendo órdenes libres y encadeno pasos, por ejemplo: abre Spotify y busca salsa.");
             return true;
         }
         return false;
@@ -474,7 +509,7 @@ final class Cerebro {
         if (m == null) return false;
         final String quien = t.grupo(m, 1);
         final String texto = t.grupo(m, 2);
-        final boolean sms = p("\\b(?:sms|mensaje de texto|texto)\\b").matcher(t.n).find();
+        final boolean sms = p("\\b(?:sms|mensaje de texto|texto)\\b").matcher(t.n.substring(0, m.start(2))).find();
         final String digitos = soloDigitos(quien.toLowerCase(PE));
         if (digitos != null) {
             preguntarMensaje(a, digitos, digitos, texto, sms);
